@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 #import <XCTest/XCTest.h>
+#import "Event.h"
 
 @interface MeetMeUpTests : XCTestCase
 
@@ -15,9 +16,10 @@
 
 @implementation MeetMeUpTests
 
-- (void)setUp {
+- (void)setUp
+{
     [super setUp];
-    // Put setup code here. This method is called before the invocation of each test method in the class.
+
 }
 
 - (void)tearDown {
@@ -25,16 +27,109 @@
     [super tearDown];
 }
 
-- (void)testExample {
-    // This is an example of a functional test case.
-    XCTAssert(YES, @"Pass");
+- (void)testSearchResutsCountEqualFifteen
+{
+    [Event performSearchWithKeyword:@"mobile" andComplete:^(NSArray *events) {
+        XCTAssertEqual(15, events.count);
+    }];
 }
 
-- (void)testPerformanceExample {
-    // This is an example of a performance test case.
-    [self measureBlock:^{
-        // Put the code you want to measure the time of here.
+- (void)testAttendanceCountIncrement
+{
+
+    XCTestExpectation *expectation = [self expectationWithDescription:@"Waiting for comments to return"];
+
+    [Event performSearchWithKeyword:@"mobile" andComplete:^(NSArray *events) {
+
+        Event *secondEvent = [events objectAtIndex:1];
+
+        int attendingCount = [[secondEvent RSVPCount] intValue];
+        secondEvent.attending = YES;
+        XCTAssertEqual(++attendingCount, [[secondEvent RSVPCount] intValue] + 1);
+
+        [expectation fulfill];
     }];
+
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
+}
+
+- (void)testAttendanceCountDecrement
+{
+    XCTestExpectation *expectation = [self expectationWithDescription:@"Waiting for comments to return"];
+
+    [Event performSearchWithKeyword:@"mobile" andComplete:^(NSArray *events) {
+
+        Event *secondEvent = [events objectAtIndex:1];
+
+        secondEvent.attending = YES;
+        int attendingCount = [[secondEvent RSVPCount] intValue];
+        secondEvent.attending = NO;
+        XCTAssertEqual(--attendingCount, [[secondEvent RSVPCount] intValue] - 1);
+
+        [expectation fulfill];
+    }];
+
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
+}
+
+- (void)testAttendanceBooleanManagedProperly
+{
+    XCTestExpectation *expectation = [self expectationWithDescription:@"Waiting for comments to return"];
+
+    [Event performSearchWithKeyword:@"mobile" andComplete:^(NSArray *events) {
+
+        Event *secondEvent = [events objectAtIndex:1];
+
+        secondEvent.attending = YES;
+
+        XCTAssertEqual(secondEvent.attending, YES);
+
+        [expectation fulfill];
+    }];
+
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
+
+}
+
+- (void)testSecondEventCommentCount
+{
+    XCTestExpectation *expectation = [self expectationWithDescription:@"Waiting for comments to return"];
+
+    [Event performSearchWithKeyword:@"mobile" andComplete:^(NSArray *events) {
+
+        Event *secondEvent = [events objectAtIndex:1];
+
+        [secondEvent getCommentsWithBlock:^(NSArray *comments)
+        {
+            Comment *comment = [comments objectAtIndex:0];
+            NSString *expectedMemberID = @"99045732";
+            XCTAssertEqual(1, comments.count);
+            [expectation fulfill];
+        }];
+    }];
+
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
+}
+
+- (void)testSecondEventCommentAuthorMemberID
+{
+    XCTestExpectation *expectation = [self expectationWithDescription:@"Waiting for comments to return"];
+
+    [Event performSearchWithKeyword:@"mobile" andComplete:^(NSArray *events) {
+
+        Event *secondEvent = [events objectAtIndex:1];
+
+        [secondEvent getCommentsWithBlock:^(NSArray *comments)
+         {
+             Comment *comment = [comments objectAtIndex:0];
+             NSString *expectedMemberID = @"99045732";
+             NSString *actualMemberID = [[comment valueForKey:@"memberID"] stringValue];
+             XCTAssertEqual(1, comments.count);
+             XCTAssertEqualObjects(expectedMemberID, actualMemberID);
+             [expectation fulfill];
+         }];
+    }];
+    [self waitForExpectationsWithTimeout:10.0 handler:nil];
 }
 
 @end
